@@ -17,19 +17,22 @@ doctype_js = {
 	"Issue": "public/js/doctype_js/issue.js",
 }
 doc_events = {
-    "Issue": {
-        "before_naming":"jciw.api.issue_before_naming",
-        "before_validate": "jciw.api.issue_before_validate",
-        "validate": "jciw.api.issue_validate"
-    }
+	"Issue": {
+		"before_naming":"jciw.api.issue_before_naming",
+		"before_validate": "jciw.api.issue_before_validate",
+		"validate": "jciw.api.issue_validate"
+	}
 }
 
 scheduler_events = {
-    "cron": {
-        "0/1 * * * *": [
+	"cron": {
+		"0/1 * * * *": [
 			"jciw.api.escalation_email"
 		],
-    }
+	}
+	# "all":[
+	# 	"jciw.api.make_status_overdue"
+	# ]
 }
 
 # Includes in <head>

@@ -59,10 +59,6 @@ def set_escalation_due_date(self):
 				due_time = max(due_time,default_shift.lunch_end_time)
 				due_time = get_time(datetime.datetime.combine(datetime.date.today(), due_time) + extra_hrs)
 
-		delta = timedelta(days=1)
-		while due_date in holiday_list:
-			due_date += delta
-
 		if due_time > default_shift.end_time:
 			#due_time =  due_time
 			date = datetime.date(1, 1, 1)
@@ -73,10 +69,9 @@ def set_escalation_due_date(self):
 			due_time = get_time(final_due_time)
 			#due_time = (datetime.datetime.combine(datetime.date.today(), default_shift.start_time) + timedelta(hours=hour['hour'], minutes=hour['min'])).time()
 			due_date = add_days(due_date,1)
-			# delta = timedelta(days=1)
-			
-			# while due_date in holiday_list:
-			# 	due_date += delta
+			delta = timedelta(days=1)
+			while due_date in holiday_list:
+				due_date += delta
 			if hours.index(hour) == 0:
 				self.db_set('escalation_1_due__date',datetime.datetime.combine(due_date,due_time))
 			if hours.index(hour) == 1:
@@ -84,6 +79,9 @@ def set_escalation_due_date(self):
 			else:
 				self.db_set('escalation_3_due__date',datetime.datetime.combine(due_date,due_time))
 		else:
+			delta = timedelta(days=1)
+			while due_date in holiday_list:
+				due_date += delta
 			if hours.index(hour) == 0:
 				self.db_set('escalation_1_due__date',datetime.datetime.combine(due_date,due_time))
 			if hours.index(hour) == 1:
@@ -114,21 +112,21 @@ def escalation_email():
 		
 		if doc.escalation_1_due__date:
 			if str(doc.escalation_1_due__date) <= now() and not doc.escalation_1_sent:
-				recipients_1 = [doc.escalation_1_email]
+				recipients_1 = doc.escalation_1_email.split(",")
 				header = "<p>This is a warning notification for a first response time getting overdue at {}</p>".format(doc.escalation_1_due__date)
 				subject = "SLA Escalation. Case Number {} Request due at : {}".format(doc.name,doc.escalation_1_due__date)
 				doc.db_set('escalation_1_sent',1)
 
 		if doc.escalation_2_due__date:
 			if str(doc.escalation_2_due__date) <= now() and not doc.escalation_2_sent:
-				recipients_2 = [doc.escalation_2_email]
+				recipients_2 = doc.escalation_2_email.split(",")
 				header = "<p>This is a warning notification for a first response time getting overdue at {}</p>".format(doc.escalation_2_due__date)
 				subject = "SLA Escalation. Case Number {} Request due at : {}".format(doc.name,doc.escalation_2_due__date)
 				doc.db_set('escalation_2_sent',1)
 
 		if doc.escalation_3_due__date:
 			if str(doc.escalation_3_due__date) <= now() and not doc.escalation_3_sent:
-				recipients_3 = [doc.escalation_3_email]
+				recipients_3 = doc.escalation_3_email.split(",")
 				if doc.site:
 					site_manager = frappe.db.get_value("Technician",{"site":doc.site},"reports_to")
 					if site_manager:
@@ -144,7 +142,7 @@ def escalation_email():
 				<li>Project Num</li> : {2}
 				<li>Unit Type</li> : {3}
 				<li>Failure Details</li> : {4}
-				<li>JCI Team Leader</li> : {5}
+				<li>JCIW Ticket</li> : {5}
 				</ul>
 				<a href="/desk#Form/Issue/{6}">
 				Click here to view the ticket.
@@ -171,4 +169,10 @@ def escalation_email():
 				message = message,
 				now = 1
 			)
-			
+
+@frappe.whitelist()			
+def make_status_overdue():
+	data = frappe.get_list("Issue",filters = {'escalation_3_due__date':['<',now()],'status':'Open','sla_status':['!=','Overdue']},fields = 'name')
+	for row in data:
+		doc = frappe.get_doc("Issue",row.name)
+		doc.db_set('sla_status',"Overdue")
