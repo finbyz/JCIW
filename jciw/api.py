@@ -21,7 +21,7 @@ def set_subject(self):
 		self.subject = "Case Open Case Number - {}".format(self.name)
 
 def set_escalation_due_date(self):
-	hours = [{'hour':1,'min':45},{'hour':2,'min':0},{'hour':4,'min':0}]
+	hours = [{'hour':2,'min':15},{'hour':2,'min':30},{'hour':4,'min':0}]
 	for hour in hours:	
 		default_holiday = frappe.db.get_value("Company","JCIW",'default_holiday_list')
 		holiday = frappe.get_doc("Holiday List",default_holiday)
@@ -34,6 +34,9 @@ def set_escalation_due_date(self):
 		due_date = getdate(self.opening_date)
 		opening_time = get_time(self.opening_time)
 		if due_date in holiday_list or opening_time > default_shift.end_time:
+			due_date = add_days(due_date,1)
+			due_time = (datetime.datetime.combine(datetime.date.today(), default_shift.start_time) + timedelta(hours=hour['hour'], minutes=hour['min'])).time()
+		elif due_date in holiday_list or opening_time < default_shift.start_time:
 			due_time = (datetime.datetime.combine(datetime.date.today(), default_shift.start_time) + timedelta(hours=hour['hour'], minutes=hour['min'])).time()
 		else:
 			due_time = (datetime.datetime.combine(datetime.date.today(), opening_time) + timedelta(hours=hour['hour'], minutes=hour['min'])).time()
@@ -90,16 +93,16 @@ def set_escalation_due_date(self):
 				self.db_set('escalation_3_due__date',datetime.datetime.combine(due_date,due_time))
 
 def is_hour_between(start, end, now):
-    is_between = False
+	is_between = False
 
-    is_between |= start <= now <= end
-    is_between |= end < start and (start <= now or now <= end)
+	is_between |= start <= now <= end
+	is_between |= end < start and (start <= now or now <= end)
 
-    return is_between
+	return is_between
 
 @frappe.whitelist()
 def escalation_email():
-	data = frappe.get_list("Issue",filters = {'technician':['=','']},fields = 'name')
+	data = frappe.get_list("Issue",filters = {'technician':['=',''],'status':"Open"},fields = 'name')
 	for row in data:
 		doc = frappe.get_doc("Issue",row.name)
 		recipients_1 = []
@@ -113,15 +116,15 @@ def escalation_email():
 		if doc.escalation_1_due__date:
 			if str(doc.escalation_1_due__date) <= now() and not doc.escalation_1_sent:
 				recipients_1 = doc.escalation_1_email.split(",")
-				header = "<p>This is a warning notification for a first response time getting overdue at {}</p>".format(doc.escalation_1_due__date)
-				subject = "SLA Escalation. Case Number {} Request due at : {}".format(doc.name,doc.escalation_1_due__date)
+				header = "<p>This is a warning notification for a first response time getting overdue at {}</p>".format(doc.escalation_1_due__date.strftime('%B %d %Y, %I:%M %p'))
+				subject = "SLA Escalation. Case Number {} Request due at : {}".format(doc.name,doc.escalation_1_due__date.strftime('%B %d %Y, %I:%M %p'))
 				doc.db_set('escalation_1_sent',1)
 
 		if doc.escalation_2_due__date:
 			if str(doc.escalation_2_due__date) <= now() and not doc.escalation_2_sent:
 				recipients_2 = doc.escalation_2_email.split(",")
-				header = "<p>This is a warning notification for a first response time getting overdue at {}</p>".format(doc.escalation_2_due__date)
-				subject = "SLA Escalation. Case Number {} Request due at : {}".format(doc.name,doc.escalation_2_due__date)
+				header = "<p>This is a warning notification for a first response time getting overdue at {}</p>".format(doc.escalation_2_due__date.strftime('%B %d %Y, %I:%M %p'))
+				subject = "SLA Escalation. Case Number {} Request due at : {}".format(doc.name,doc.escalation_2_due__date.strftime('%B %d %Y, %I:%M %p'))
 				doc.db_set('escalation_2_sent',1)
 
 		if doc.escalation_3_due__date:
@@ -131,8 +134,8 @@ def escalation_email():
 					site_manager = frappe.db.get_value("Technician",{"site":doc.site},"reports_to")
 					if site_manager:
 						recipients_3.append(site_manager)
-				header = "<p>This is a warning notification for a first response time getting overdue at {}</p>".format(doc.escalation_3_due__date)
-				subject = "SLA Escalation. Case Number {} Request due at : {}".format(doc.name,doc.escalation_3_due__date)
+				header = "<p>This is a warning notification for a first response time getting overdue at {}</p>".format(doc.escalation_3_due__date.strftime('%B %d %Y, %I:%M %p'))
+				subject = "SLA Escalation. Case Number {} Request due at : {}".format(doc.name,doc.escalation_3_due__date.strftime('%B %d %Y, %I:%M %p'))
 				doc.db_set('escalation_3_sent',1)
 
 		body = """
@@ -159,7 +162,6 @@ def escalation_email():
 
 		message = header + body
 		recipients = recipients_1 + recipients_2 + recipients_3
-		print(recipients)
 		if recipients:
 			frappe.sendmail(
 				recipients=recipients,

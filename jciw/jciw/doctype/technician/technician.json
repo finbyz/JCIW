@@ -1,4 +1,5 @@
 {
+ "actions": [],
  "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:name1",
@@ -37,6 +38,7 @@
   {
    "fieldname": "sms",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "SMS"
   },
   {
@@ -94,7 +96,9 @@
    "read_only": 1
   }
  ],
- "modified": "2021-05-22 11:00:38.112065",
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2022-03-22 15:55:42.021977",
  "modified_by": "Administrator",
  "module": "Jciw",
  "name": "Technician",
